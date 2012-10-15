@@ -9,6 +9,7 @@ require 'active_support/all'
 class HTTPHandler < EM::HttpServer::Server
 	def process_http_request
 		puts @http_request_uri
+		puts @http_request_method
 
 		response = EM::DelegatedHttpResponse.new(self)
 		status = 404
@@ -18,7 +19,7 @@ class HTTPHandler < EM::HttpServer::Server
 		keys = []
 		vals = []
 		has_parameters = false
-		if @http_query_string != nil
+		if @http_query_string != nil and @http_request_method == "GET"
 			parse_request = @http_query_string.split('&')
 			if parse_request.length > 0 then
 				parse_request.each {|param|
@@ -27,8 +28,17 @@ class HTTPHandler < EM::HttpServer::Server
 					vals.push CGI::unescape(kv_array[1])
 				}
 			end
+		elsif @http_content != nil and @http_request_method == "POST"
+			parse_request = @http_content.split('&')
+			if parse_request.length > 0 then
+				parse_request.each {|param|
+					kv_array = param.split('=')
+					keys.push kv_array[0]
+					vals.push CGI::unescape(kv_array[1])
+				}
+			end			
 		end
-		if keys.length > 1
+		if keys.length >= 1
 			# Must be matching pairs of keys otherwise lets ignore it
 			# There must be a better way?
 			if keys.length == vals.length
